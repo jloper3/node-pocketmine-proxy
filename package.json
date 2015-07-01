@@ -1,0 +1,11 @@
+{
+  "name": "node-pocketmine-proxy",
+  "version": "0.0.0",
+  "description": "proxy / load balancer for mcpe/pocketmine",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "jloper3@gmail.com",
+  "license": "BSD-2-Clause"
+}
