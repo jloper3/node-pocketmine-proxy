@@ -5,63 +5,98 @@ var net = require('net');
 
 var PocketMineProxy = function (options) {
     "use strict";
+    var settings = { UDP_TYPE: 'udp4',
+                     IP_FAMILY:  'IPv4' };
     var proxy = this;
-    var localUdpType = 'udp4';
-    var localfamily = 'IPv4';
-    var servers = [];
-    for (i=0; i < options.servers.length; i++) {
-       servers.push(options.servers[i]);
+    this.servers = [];
+    for (var i=0; i < options.servers.length; i++) {
+       this.servers.push(options.servers[i]);
     }
-    var serverPort = options.localport || 0;
-    var serverHost = options.localaddress || '0.0.0.0';
-    var proxyHost = options.proxyaddress || '0.0.0.0';
+    var proxyPort  = options.proxyPort || 19132;
+    var proxyHost = options.proxyHost || '0.0.0.0';
     this.timeOutTime = options.timeOutTime || 10000;
-    this.family = 'IPv4';
-    this.udpType = 'udp4';
-    this.host = options.address || 'localhost';
-    this.port = options.port || 41234;
+    this.family = settings.IP_FAMILY;
+    this.udpType = settings.UDP_TYPE;
     this.connections = {};
+    this._proxy = dgram.createSocket(this.udpType);
+    this._proxy.on('listening', function () {
+      //  setImmediate(function() {
+       //     proxy.emit('listening', details);
+       // });
+        console.log("listening on port " + proxyPort);
+    }).on('message', function (msg, rinfo) {
+        console.log("msg from "+ JSON.stringify(rinfo));
+        var conn = proxy.createConnection(msg, rinfo);
+        if (!conn._bound) conn.bind();
+        console.log("sending to "+ proxy.servers[0].serverHost + ':' + proxy.servers[0].serverPort);
+        conn.send(msg, 0, msg.length, proxy.servers[0].serverPort, proxy.servers[0].serverHost , function (err, bytes) {
+            if (err) console.log('proxyError: '+ err);
+        });
+    }).on('error', function (err) {
+        console.log("error; closing connection");
+        this.close();
+    //    proxy.emit('error', err);
+    }).on('close', function () {
+     //   proxy.emit('close');
+    });
+    this._proxy.bind(proxyPort, proxyHost);
 }
 
+util.inherits(PocketMineProxy, events.EventEmitter);
 
-PocketMineProxy.prototype.acceptClient = function acceptClient(msg, sender) {
-    var dest = this.hashD(sender);
+PocketMineProxy.prototype.addServer = function addServer(server) {
+    this.servers.push(server);
+};
+
+PocketMineProxy.prototype.send = function send(msg, port, address, callback) {
+    this._proxy.send(msg, 0, msg.length, port, address, callback);
+};
+
+PocketMineProxy.prototype.strip = function strip(address) {
+    return (address.address + address.port).replace(/\./g, '');
+};
+
+PocketMineProxy.prototype.createConnection = function getConnection(msg, rinfo) {
+    var clientId = this.strip(rinfo);
     var proxy = this;
-     if (this.connections.hasOwnProperty(dest)) {
-        client = this.connections[dest];
-        clearTimeout(client.t);
-        client.t = null;
-        return client;
+     if (this.connections.hasOwnProperty(clientId)) {
+        console.log("Found connection for " + clientId);
+        var conn = this.connections[clientId];
+        clearTimeout(conn.t);
+        conn.t = null;
+        return conn;
     }
-    client = dgram.createSocket(this.udpType);
-    client.once('listening', function () {
-        var details = proxy.getDetails({route: this.address(), peer: sender});
-        this.peer = sender;
-        this._bound = true;
-        proxy.emit('bound', details);
-        this.emit('send', msg, sender);
-    }).on('message', function (msg, sender) {
-        proxy.send(msg, this.peer.port, this.peer.address, function (err, bytes) {
-            if (err) proxy.emit('proxyError', err);
+    console.log("Creating new connection for "+ rinfo.address + ":" + rinfo.port);
+    conn = dgram.createSocket(this.udpType);
+    conn.once('listening', function () {
+        //var details = proxy.getDetails({route: this.address(), peer: sender});
+        //console.log("sending to " + JSON.stringify(proxy.servers[0]));
+        this.send(msg, 0, msg.length, proxy.servers[0].serverPort, proxy.servers[0].serverHost, function (err, bytes) {
+           if (err) proxy.emit('proxyError', err);
+           console.log("error initial send " + err);
         });
-        proxy.emit('proxyMsg', msg, sender);
+        this._bound = true;
+        proxy.emit('bound', rinfo);
+    }).on('message', function (msg, rinfoo) {
+        proxy.send(msg, rinfo.port, rinfo.address, function (err, bytes) {
+            if (err) { 
+               proxy.emit('proxyError', err);
+               console.log("error send " + err);
+            }
+        });
     }).on('close', function () {
-        proxy.emit('proxyClose', this.peer);
+        //proxy.emit('proxyClose', this.peer);
         this.removeAllListeners();
-        delete proxy.connections[senderD];
+        delete proxy.connections[clientId];
+        console.log("connection closed for " + rinfo.address +":"+rinfo.port);
     }).on('error', function (err) {
         this.close();
         proxy.emit('proxyError', err);
-    }).on('send', function (msg, sender) {
-        var self = this;
-        proxy.emit('message', msg, sender);
-        this.send(msg, 0, msg.length, proxy.port, proxy.host, function (err, bytes) {
-            if (err) proxy.emit('proxyError', err);
-            if (!self.t) self.t = setTimeout(function () {
-                self.close();
-            }, proxy.tOutTime);
-        });
     });
-    this.connections[senderD] = client;
-    return client;
+    this.connections[clientId] = conn;
+    return conn;
+};
+
+exports.start = function (options) {
+    return new PocketMineProxy(options);
 };
