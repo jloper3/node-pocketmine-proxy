@@ -5,37 +5,44 @@ var net = require('net');
 var clientProxy = require('./proxyClient.js')
 
 var PocketMineProxy = function (options) {
-    var proxy = this;
-    this.servers = [];
-    this.index = 0;
+    var self = this;
+    self.servers = [];
     for (var i=0; i < options.servers.length; i++) {
        this.servers.push(options.servers[i]);
     }
-    var proxyPort  = options.proxyPort || 19132;
-    var proxyHost = options.proxyHost || '0.0.0.0';
-    this.timeOutTime = options.timeOutTime || 10000;
-    this.family = options.family || 'IPv4';
-    this.udpType = option.udpType || 'udp4';
-    this.connections = {};
-    this._socket = dgram.createSocket(this.udpType);
-    this._socket.on('listening', function () {
-        proxy.emit('listening', proxyPort);
+    self.proxyPort  = options.proxyPort || 19132;
+    self.proxyHost = options.proxyHost || '0.0.0.0';
+    self.timeOutTime = options.timeOutTime || 10000;
+    self.udpType = option.udpType || 'udp4';
+    self.connections = {};
+    self.socket = dgram.createSocket(this.udpType);
+    self.socket.on('listening', function () {
+        self.emit('listening', proxyPort);
         console.log("listening on port " + proxyPort);
     }).on('message', function (msg, rinfo) {
-        var clientId = proxy.strip(rinfo)
-        if (!connections.hasOwnProperty(clientId)) connections[clientId] = proxyClient.Client(clientOptions);
-        var client = connections[clientId];
-        client.send(msg, 0, msg.length, conn.server.serverPort, conn.server.serverHost , function (err, bytes) {
+        var clientId = self.strip(rinfo)
+        if (!connections.hasOwnProperty(clientId)) { 
+           var server = self.getServer();
+           var clientOptions = {
+                                 server: self.getServer(),
+                                 message: msg,
+                                 rinfo: rinfo,
+                                 client: self._socket
+                               };
+           self.connections[clientId] = proxyClient.spawn(clientOptions);
+        }
+        var client = self.connections[clientId];
+        client.send(msg, function (err, bytes) {
             if (err) console.log('proxyError: '+ err);
         });
     }).on('error', function (err) {
         console.log("error; closing connection");
-        this.close();
+        self._socket.close();
         proxy.emit('error', err);
     }).on('close', function () {
         proxy.emit('close');
     });
-    this._socket.bind(proxyPort, proxyHost);
+    self._socket.bind(proxyPort, proxyHost);
 }
 
 util.inherits(ProxyClient, events.EventEmitter);

@@ -3,31 +3,25 @@ var events = require('events');
 var util = require('util');
 var net = require('net');
 
-
-
-function ProxyClient(options) {
+function ProxyConnection(server, proxy, rinfo, timeout) {
     var self = this;
-    self.serverHost = options.serverHost;
-    self.serverPort = options.serverPort;
-    self.Socket = options.clientSocket;
-    self.clientHost = options.clientHost;
-    self.clientPort = option.clientPort;
     self.timeOut = options.timeOut || 10000;
-    self.family = options.family || 'IPv4';
     self.udpType = options.udpType || 'udp4';
-    self.client = dgram.createSocket(self.udpType);
-    var client = self.client;
+    self._socket = dgram.createSocket(self.udpType);
+    var client = self._socket;
+    var msg = options.message;
     client.once('listening', function () {
-        server.send(msg, 0, msg.length, self.serverPort, self.serverHost, function (err, bytes) {
+        self.send(msg, function (err, bytes) {
            if (err) { 
               //self.emit('proxyError', err);
+              client.close();
               console.log("error initial send " + err);
            }
         });
         //self._bound = true;
         //self.emit('bound', rinfo);
     }).on('message', function (msg, rinfoo) {
-        self.send(msg, rinfo.port, rinfo.address, function (err, bytes) {
+        proxy.send(msg, self.clientPort, self.clientHost, function (err, bytes) {
             if (err) { 
          //      self.emit('proxyError', err);
                console.log("error send " + err);
@@ -35,22 +29,26 @@ function ProxyClient(options) {
         });
         clearTimeout(self.t);
         self.t = setTimeout(function() {
-           server.close();
+           client.close();
            console.log("timed out. closing connection");
         }, self.timeOutTime);
     }).on('close', function () {
         //proxy.emit('proxyClose', this.peer);
-        server.removeAllListeners();
+        client.removeAllListeners();
         //delete self.connections[clientId];
         console.log("connection closed for " + rinfo.address +":"+rinfo.port);
     }).on('error', function (err) {
-        server.close();
-        self.emit('proxyError', err);
+        client.close();
+       // self.emit('proxyError', err);
     });
 };
 
-exports.spawn = function (options) {
-  return new ProxyClient(options);
+ProxyConnection.prototype.send = function send(msg, callback) {
+    this._socket.send(msg, 0, msg.length, self.port, self.host, callback);
+};
+
+exports.connect = function (options) {
+  return new ProxyConnection(options);
 }
 
 
