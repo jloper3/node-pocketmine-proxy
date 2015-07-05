@@ -3,7 +3,7 @@ var events = require('events');
 var util = require('util');
 var net = require('net');
 
-function ProxyConnection(server, proxy, rinfo, timeout) {
+function ServerConnection(server, proxy, rinfo, timeout) {
     var self = this;
     self.timeOut = options.timeOut || 10000;
     self.udpType = options.udpType || 'udp4';
@@ -43,8 +43,8 @@ function ProxyConnection(server, proxy, rinfo, timeout) {
     });
 };
 
-ProxyConnection.prototype.send = function send(msg, callback) {
-    this._socket.send(msg, 0, msg.length, self.port, self.host, callback);
+ServerConnection.prototype.send = function send(msg, callback) {
+    this._socket.send(msg, 0, msg.length, this.port, this.host, callback);
 };
 
 exports.connect = function (options) {
