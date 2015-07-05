@@ -10,6 +10,7 @@ var PocketMineProxy = function (options) {
     for (var i=0; i < options.servers.length; i++) {
        this.servers.push(options.servers[i]);
     }
+    self._index = 0;
     self.proxyPort  = options.proxyPort || 19132;
     self.proxyHost = options.proxyHost || '0.0.0.0';
     self.timeOutTime = options.timeOutTime || 10000;
@@ -58,8 +59,13 @@ PocketMineProxy.prototype.strip = function strip(address) {
 };
 
 PocketMineProxy.prototype.getServer = function () {
-   return this.servers[0];
+   var server = this.servers[this._index];
+   this._index++;
+   if (this._index > this.servers.length) this._index = 0;
+   return server;
 }
+
+
 
 
 exports.start = function (options) {
