@@ -11,7 +11,8 @@ var PocketMineProxy = function (options) {
        this.servers.push(options.servers[i]);
     }
     self._index = 0;
-    self.proxyPort  = options.proxyPort || 19132;
+    self.proxyPort = options.proxyPort || 19132;
+    console.log("port "+self.proxyPort);
     self.proxyHost = options.proxyHost || '0.0.0.0';
     self.timeOutTime = options.timeOutTime || 10000;
     self.udpType = options.udpType || 'udp4';
@@ -44,7 +45,7 @@ var PocketMineProxy = function (options) {
     }).on('close', function () {
         proxy.emit('close');
     });
-    self.socket.bind(self.proxyPort, self.proxyHost);
+    self.socket.bind(self.proxyPort);
 }
 
 util.inherits(PocketMineProxy, events.EventEmitter);
@@ -61,7 +62,7 @@ PocketMineProxy.prototype.strip = function strip(address) {
 PocketMineProxy.prototype.getServer = function () {
    var server = this.servers[this._index];
    this._index++;
-   if (this._index > this.servers.length) this._index = 0;
+   if (this._index >= this.servers.length) this._index = 0;
    return server;
 }
 
