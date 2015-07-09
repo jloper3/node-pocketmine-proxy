@@ -58,12 +58,27 @@ PocketMineProxy.prototype.strip = function strip(address) {
     return (address.address + address.port).replace(/\./g, '');
 };
 
+PocketMineProxy.prototype.getConnections = function getConnections() {
+   var connects = [];
+   var connections = this.connections;
+   for (var key in connections) {
+      var client = connections[key];
+      connects.push({ host: client.host, port: client.port});
+   }
+   return connects;
+};
+
 PocketMineProxy.prototype.getServer = function () {
    var server = this.servers[this._index];
    this._index++;
    if (this._index > this.servers.length) this._index = 0;
    return server;
-}
+};
+
+PocketMineProxy.prototype.deleteClient = function (host, port) {
+   var clientId = this.strip({address: host, port: port});
+   delete this.connections[clientId];
+};
 
 
 

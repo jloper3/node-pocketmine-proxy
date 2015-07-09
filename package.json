@@ -10,6 +10,6 @@
   "author": "jloper3@gmail.com",
   "license": "BSD-2-Clause",
   "dependencies": {
-    "express": "~4.13.0"
+    "express": "~4.13.1"
   }
 }

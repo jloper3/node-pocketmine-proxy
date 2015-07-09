@@ -34,6 +34,7 @@ function ServerConnection(options) {
         clearTimeout(self.t);
         self.t = setTimeout(function() {
            client.close();
+           proxy.deleteClient(self.host, self.port);
            console.log("timed out. closing connection");
         }, self.timeOut);
     }).on('close', function () {
